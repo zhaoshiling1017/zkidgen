@@ -1,0 +1,136 @@
+<project name="zkidgen" default="dist" basedir=".">
+    <description>Zookeeper ID Generator build</description>
+
+	<target name="all" depends="clean,dist"/>
+
+	<!-- - - - - - - - - - - - - - - - - - - - - - INITIALIZATION TARGETS - - - - - - - - - - - - - - - - - - - - - - -->
+	<target name="init">
+		<property name="version" value="1.2"/>
+		<property name="source-dir" value="src"/>
+		<property name="build-dir" value="classes"/>
+		<property name="lib-dir" value="lib"/>
+		<property name="bin-dir" value="bin"/>
+		<property name="conf-dir" value="conf"/>
+	
+		<property name="test-source-dir" value="test_src"/>
+		<property name="test-build-dir" value="test_classes"/>
+		<property name="test-lib-dir" value="test_lib"/>
+	
+		<property name="jar-dir" value="jars"/>
+		<property name="dist-dir" value="dist"/>
+
+		<!-- classpath for building main source -->
+		<path id="cp">
+			<!-- add 3rd party (open source) jars/libraries onto the classpath here -->
+			<pathelement path="${user.home}/.log4j"/>
+			<pathelement location="${lib-dir}/slf4j-api-1.5.6.jar"/>
+			<pathelement location="${lib-dir}/slf4j-log4j12-1.5.6.jar"/>
+			<pathelement location="${lib-dir}/log4j-1.2.15.jar"/>
+			<pathelement location="${lib-dir}/zookeeper-3.3.0-bin.jar"/>
+		</path>
+
+		<!-- additional classpath for building test source -->
+		<path id="test-cp">
+			<pathelement path="${build-dir}"/>
+			<path refid="cp"/>
+			<pathelement path="${test-build-dir}"/>
+			<pathelement location="${test-lib-dir}/junit-addons-1.4.jar"/>
+		</path>
+	</target>
+
+
+	<target name="clean" depends="init" description="clean up">
+		<delete dir="${build-dir}"/>
+		<delete dir="${test-build-dir}"/>
+		<delete dir="${jar-dir}"/>
+		<delete dir="${dist-dir}"/>
+	</target>
+
+	<!-- - - - - - - - - - - - - - - - - - - - - - BUILD TARGETS - - - - - - - - - - - - - - - - - - - - - - -->
+	<target name="build" depends="init" description="compile the source">
+		<mkdir dir="${build-dir}"/>
+
+		<javac
+			compiler="javac1.5"
+			srcdir="${source-dir}"
+			destdir="${build-dir}"
+			debug="true"
+			classpathref="cp"
+		/>
+	</target>
+
+	<target name="build-test" depends="build" description="compile the unit test source">
+		<mkdir dir="${test-build-dir}"/>
+
+		<javac
+			source="5"
+			srcdir="${test-source-dir}"
+			destdir="${test-build-dir}"
+			classpathref="test-cp"
+		/>
+	</target>
+
+
+	<!-- - - - - - - - - - - - - - - - - - - - - - TEST TARGETS - - - - - - - - - - - - - - - - - - - - - - -->
+	<target name="test" depends="test-unit"/>
+
+	<target name="test-unit" depends="build-test">
+		<junit haltonfailure="yes">
+			<batchtest>
+				<fileset dir="${test-build-dir}">
+					<include name="**/Test*.class"/>
+					<include name="**/*Test.class"/>
+					<exclude name="**/Test*$*.class"/>
+					<exclude name="**/TestingConstants.class"/>
+				</fileset>
+			</batchtest>
+			<classpath refid="test-cp"/>
+			<formatter type="brief" usefile="false"/>
+		</junit>
+	</target>
+
+	<!-- - - - - - - - - - - - - - - - - - - - - - DISTRIBUTION TARGETS - - - - - - - - - - - - - - - - - - - - - - -->
+
+	<target name="jar" depends="build, mkjardir">
+	    <jar jarfile="${jar-dir}/zkidgen-${version}.jar" basedir="${build-dir}"/>
+	</target>
+
+	<target name="jar-test" depends="build-test, mkjardir">
+	    <jar jarfile="${jar-dir}/zkidgen-test-${version}.jar" basedir="${test-build-dir}"/>
+	</target>
+
+	<target name="mkjardir">
+		<mkdir dir="${jar-dir}"/>
+	</target>
+
+	<target name="dist" depends="jar, mkdistdir">
+                <property name="dist-version-dir" value="${dist-dir}/zkidgen-${version}"/>
+
+		<copy file="LICENSE" todir="${dist-version-dir}"/>
+		<copy file="NOTICE" todir="${dist-version-dir}"/>
+		<copy file="${jar-dir}/zkidgen-${version}.jar" todir="${dist-version-dir}"/>
+		<!--copy file="${jar-dir}/zkidgen-test-${version}.jar" todir="${dist-version-dir}"/-->
+		<copy file="${lib-dir}/slf4j-api-1.5.6.jar" todir="${dist-version-dir}"/>
+		<copy file="${lib-dir}/slf4j-log4j12-1.5.6.jar" todir="${dist-version-dir}"/>
+		<copy file="${lib-dir}/log4j-1.2.15.jar" todir="${dist-version-dir}"/>
+		<copy file="${lib-dir}/zookeeper-3.3.0-bin.jar" todir="${dist-version-dir}"/>
+		<copy file="${conf-dir}/log4j/log4j.properties" todir="${dist-version-dir}"/>
+		<copy file="${bin-dir}/IDGeneratorCLI.sh" todir="${dist-version-dir}"/>
+		<chmod file="${dist-version-dir}/IDGeneratorCLI.sh" perm="755"/>
+
+		<delete file="${dist-dir}/zkidgen-${version}.tar.gz"/>
+		<tar destfile="${dist-dir}/zkidgen-${version}.tar.gz" compression="gzip">
+			<tarfileset dir="${dist-dir}" mode="755" username="root" group="root">
+				<include name="zkidgen-${version}/IDGeneratorCLI.sh"/>
+			</tarfileset>
+			<tarfileset dir="${dist-dir}" username="root" group="root">
+				<include name="zkidgen-${version}/**"/>
+				<exclude name="zkidgen-${version}/IDGeneratorCLI.sh"/>
+			</tarfileset>
+		</tar>
+	</target>
+
+	<target name="mkdistdir">
+		<mkdir dir="${dist-dir}"/>
+	</target>
+</project>
